@@ -107,7 +107,7 @@ const AiSummarySection = ({ paperId }) => {
         </div>
         {isAuthenticated && (
           <button
-            onClick={handleFollowTopic ? handleRegenerate : undefined}
+            onClick={handleRegenerate}
             disabled={regenerating}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-brand-textMuted hover:text-brand-text border border-brand-border hover:border-brand-primary bg-brand-border/40 rounded-xl transition-all"
           >
