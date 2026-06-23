@@ -1,454 +1,431 @@
-# ResearchPulse
+# 🌀 ResearchPulse
 
-Real-time academic research intelligence platform — API, React frontend, and an embeddings microservice.
-
----
-
-## Table of Contents
-- Project overview
-- Tech stack
-- Architecture (diagram)
-- Features
-- Repo layout
-- Environment variables (full)
-- Local development (detailed)
-- Docker & docker-compose (complete examples)
-- Production deployment (step-by-step)
-- CI/CD example (GitHub Actions)
-- Kubernetes (manifests + guidance)
-- Scaling, monitoring & observability
-- Security & secrets management
-- Backups & disaster recovery
-- Troubleshooting & diagnostics
-- Next steps
+Real-time academic research intelligence platform — Powered by a Node.js/Express API, React + Vite frontend, and a Python Sentence-Transformers embeddings microservice.
 
 ---
 
-## Project overview
+## 👨‍💻 Developer Details
 
-ResearchPulse aggregates academic papers, provides semantic search, AI-generated summaries, trends and recommendations, and real-time notifications. The repository contains three main components:
+<div align="center">
+  <h3>Sumanshu Jindal</h3>
+  <p>Full Stack AI & Platform Engineer</p>
+  <a href="https://www.linkedin.com/in/sumanshu-jindal01/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
+  <a href="https://github.com/Sumanshu01"><img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" /></a>
+</div>
 
-- Backend API: `backend` (Node.js/Express)
-- Frontend: `frontend` (React + Vite)
-- Embedding service: `embedding-service` (Python Flask + sentence-transformers)
+---
 
-This README documents the tech stack, architecture, environment variables, local development, and recommended deployment approaches.
+## 📖 Table of Contents
+- [Project Importance](#-project-importance)
+- [Tech Stack](#%EF%B8%8F-tech-stack)
+- [Key Features](#-key-features)
+- [System Architecture](#%EF%B8%8F-system-architecture)
+- [Repository Layout](#-repository-layout)
+- [Database Schema (MongoDB)](#-database-schema-mongodb)
+- [API Reference](#-api-reference)
+- [Environment Variables Configuration](#-environment-variables-configuration)
+- [Local Development Setup](#-local-development-setup)
+- [Docker & Containerization](#-docker--containerization)
+- [Production Deployment Guidance](#-production-deployment-guidance)
+- [Kubernetes Orchestration](#-kubernetes-orchestration)
+- [CI/CD Pipeline](#-cicd-pipeline)
+- [Monitoring & Troubleshooting](#-monitoring--troubleshooting)
 
-## Tech stack
+---
 
-- Backend: Node.js (ESM), Express, Mongoose (MongoDB), BullMQ + ioredis (background jobs), Socket.IO (real-time), Winston (logging), Swagger (API docs)
-- Frontend: React 18, Vite, Recharts, Redux Toolkit, React Router
-- Embedding service: Python Flask, sentence-transformers, PyTorch
-- Datastores: MongoDB (primary), Redis (queues & cache)
-- Optional AI: Google Gemini via `@google/generative-ai` SDK (app supports mock fallback)
-- Dev / infra: Docker, Docker Compose, GitHub Actions (recommended)
+## 💡 Project Importance
 
-## Architecture
+In the rapidly expanding world of academia and research, staying up-to-date with relevant scientific breakthroughs is a daunting task. Thousands of research papers are published daily across platforms like arXiv, Semantic Scholar, Crossref, and PubMed. 
 
-High level:
+**ResearchPulse** bridges the gap between raw research feeds and actionable insights. It aggregates scientific papers, runs background processing jobs, calculates dense vector embeddings, groups papers into semantic clusters, runs AI-powered analysis to highlight gaps and summarize structures, and serves these insights to researchers in real-time. By automating search, semantic similarity matching, and topic tracking, ResearchPulse empowers researchers to spot emerging trends, uncover under-explored research directions, and stay notified about crucial publications instantly.
 
-- Clients (browser) ↔ Frontend (static SPA)
-- SPA ↔ Backend API over REST & WebSockets (Socket.IO)
-- Backend ↔ MongoDB for persistent storage
-- Backend ↔ Redis for BullMQ queues, cache, and Socket.IO adapter (if scaled)
-- Backend ↔ Embedding microservice (HTTP) for vector generation
-- Backend ↔ Gemini API (optional) for generative summaries
-- Background workers (BullMQ) perform ingestion, embeddings, AI summarization, and indexing
+---
 
-Components in repo:
+## 🛠️ Tech Stack
 
-- `backend/src/index.js` — app entry, scheduler, server + graceful shutdown
-- `backend/src/app.js` — Express app and routes
-- `backend/src/services/embeddingService.js` — HTTP client to embedding-service
-- `embedding-service/app.py` — Flask service exposing `/embed` endpoints
+ResearchPulse leverages a modern multi-service stack optimized for speed, scalability, and developer experience:
 
-For production-scale deployments consider splitting components across separate containers or services, using managed MongoDB and Redis, and placing the embedding service on a node with adequate RAM / GPU if needed.
+*   **Frontend**: 
+    *   **React 18** (Vite-powered Single Page Application)
+    *   **Redux Toolkit & React-Redux** (Client-side state management)
+    *   **React Router v6** (Declarative client-side routing)
+    *   **Recharts & D3.js** (Dynamic data visualizations, trend charts, and research maps)
+    *   **Tailwind CSS & PostCSS** (Premium glassmorphic styling, HSL tailwind color palettes, micro-animations)
+    *   **Socket.IO-Client** (Real-time duplex notification listener)
+*   **Backend API Gateway & Workers**:
+    *   **Node.js (ESM)** & **Express** (REST API endpoints & middleware routing)
+    *   **BullMQ & ioredis** (Redis-backed multi-concurrency background job processing and scheduling)
+    *   **Socket.IO** (Real-time updates server)
+    *   **Winston** (Centralized logging with customizable log levels)
+    *   **Swagger UI Express & Swagger JSDoc** (Interactive OpenAPI 3.0 API documentation at `/api/docs`)
+*   **AI & Embeddings Service**:
+    *   **Python 3.11** & **Flask** (Microservice web framework)
+    *   **Sentence-Transformers** (`all-MiniLM-L6-v2` model generating 384-dimensional dense vector embeddings)
+    *   **PyTorch & NumPy** (Vector calculation operations)
+    *   **Google Gemini API (`gemini-1.5-flash`)** via `@google/generative-ai` (Structured JSON paper summaries, gap analysis, and growth forecasting)
+*   **Datastores**:
+    *   **MongoDB (Mongoose ODM)** (Persistent database; indexes on titles, sparse DOIs, and category tags)
+    *   **Redis (ioredis client)** (Caching layer, BullMQ task manager, and WebSocket scaling bridge)
 
-### Architecture diagram
+---
+
+## ✨ Key Features
+
+1.  **Multi-Source Ingestion Pipeline**: Ingests publications from multiple public academic search endpoints:
+    *   **arXiv** (Automated parsing of Atom XML feeds)
+    *   **OpenAlex API** (Normalized authors, metadata, and citation tracking)
+    *   **Semantic Scholar API** (Retrieving abstracts, category domains, and open access links)
+    *   **Crossref API** (DOI resolution, author affiliations, and publisher metrics)
+    *   **PubMed PMC API** (Biomedical and genetic research articles)
+    *   *Continuity Fallback*: Includes an intelligent mock data generator if external networks are rate-limited or offline.
+2.  **Dense Semantic Search & Similarities**:
+    *   Converts paper title + abstract to a 384-dimensional vector embedding.
+    *   Computes cosine similarity in JavaScript with Redis caching for ultra-fast, context-based recommendations.
+    *   Graceful fallback to category-based matching when the embedding service is offline.
+3.  **Gemini AI summarization & Forecasting**:
+    *   Extracts structural information: Executive summaries, key contributions, main findings, limitations, future work, and research methodology.
+    *   Scours topic clusters to identify research gaps (under-explored intersections).
+    *   Runs time-series forecasting to predict topic growth rate over custom horizons.
+4.  **Personalized Recommendation Engine**:
+    *   Evaluates paper candidate scores based on: followed topics (+30 pts), followed authors (+40 pts), citation volume, trend metrics, and recency boosts (e.g. +15 pts for articles published within the last 30 days).
+5.  **Analytics & Trend Radar**:
+    *   Classifies scientific topics as `emerging`, `growing`, `stable`, or `declining`.
+    *   Computes Top Author and Top Institution leaderboards based on aggregate publication count and citation growth.
+6.  **Real-Time Push Alerts**:
+    *   Socket.IO server broadcasts newly ingested papers.
+    *   Monitors user-subscribed topic or author parameters and pushes push/email alert triggers when matches occur.
+
+---
+
+## 🗺️ System Architecture
 
 ```mermaid
-flowchart LR
-  Browser-->CDN[CDN / Static Hosting]
-  CDN-->Frontend[Frontend (static files - Vite build served by nginx or CDN)]
-  Frontend-->LB[Load Balancer]
-  LB-->API1[Backend API replica 1]
-  LB-->API2[Backend API replica 2]
-  API1-->Mongo[(MongoDB)]
-  API2-->Mongo
-  API1-->Redis[(Redis)]
-  API2-->Redis
-  API1-->Embedding[Embedding Service]
-  Workers[Worker replicas]-->Redis
-  Workers-->Mongo
-  Embedding-->VectorStore[(Optional Vector DB)]
+flowchart TB
+  subgraph Client [Client Tier]
+    Browser["React SPA (Vite + Redux)"]
+  end
+
+  subgraph Gateway [Load Balancing & Ingress]
+    LB["Nginx / Load Balancer"]
+  end
+
+  subgraph Services [Application Core Services]
+    API["Node.js/Express API (Port 5000)"]
+    Worker["BullMQ Worker Pool"]
+    Flask["Flask Embedding Service (Port 5001)"]
+  end
+
+  subgraph Datastores [Data & Cache Tier]
+    Mongo[("MongoDB (Papers, Users, Trends)")]
+    Redis[("Redis (Queues, Cache, PubSub)")]
+  end
+
+  subgraph External [External APIs]
+    Gemini["Google Gemini AI"]
+    PaperAPIs["arXiv / Semantic Scholar / OpenAlex / Crossref / PubMed"]
+  end
+
+  Browser <-->|HTTPS / Socket.IO| LB
+  LB <--> API
+  
+  API <--> Mongo
+  API <--> Redis
+  API <--> Flask
+  
+  Worker <--> Redis
+  Worker <--> Mongo
+  
+  API -.-> Gemini
+  Worker -.-> PaperAPIs
+  Flask -.->|Sentence-Transformers| Flask
 ```
 
-## Features
+### Dynamic Execution Resiliency
+*   **Database Seeder Check**: On boot, the server checks MongoDB. If paper volume is low or zero, it launches a background seeding process covering 15 core research areas.
+*   **Redis Cache Fallback**: If Redis disconnects, the cache wrappers automatically switch to a localized `Map` with custom expire TTLs. Ingestions and alerts continue via an in-memory `setInterval` schedule.
+*   **Embedding Service Fallback**: If the Python microservice is unreachable, the system generates random unit-length vectors. Similarities still work gracefully by checking overlaps in category tags.
 
-- Semantic search and recommendations
-- AI-generated paper summaries and research-gap detection (Gemini integration with mock fallback)
-- Background ingestion pipeline with BullMQ and Redis
-- Real-time updates via Socket.IO
-- Authentication + JWT
-- API documentation via Swagger at `/api/docs`
+---
 
-## Repo layout (top-level)
-
-- `backend/` — Node backend, `src/`, `package.json`
-- `frontend/` — React app (Vite), `src/`, `package.json`
-- `embedding-service/` — Python Flask embedding microservice, `requirements.txt`
-
-## Environment variables
-
-Create a `.env` for local development (do NOT commit secrets). The backend and supporting services use the following environment variables.
-
-Core variables:
-
-- `PORT` — backend HTTP port (default `5000`).
-- `NODE_ENV` — `development` or `production`.
-- `LOG_LEVEL` — `debug|info|warn|error` for Winston.
-
-Database & cache:
-
-- `MONGO_URI` — MongoDB connection string (example: `mongodb://mongo:27017/research_pulse`).
-- `REDIS_URL` — Redis connection string (example: `redis://redis:6379`).
-
-Security & integrations:
-
-- `JWT_SECRET` — cryptographically-secure random string used to sign JWTs (REQUIRED in production).
-- `GEMINI_API_KEY` — optional Google Generative AI key. If absent or invalid, the app uses intelligent mock fallbacks.
-- `EMBEDDING_SERVICE_URL` — URL of the embedding microservice (default: `http://localhost:5001`).
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` — SMTP credentials for email notifications.
-
-Advanced / optional:
-
-- `SENTRY_DSN` — if integrating Sentry for error reporting.
-- `VECTOR_DB_URL` — optional vector DB endpoint (Pinecone/Weaviate/Milvus) if used.
-
-Example local `.env` (development):
+## 📁 Repository Layout
 
 ```
+.
+├── backend/
+│   ├── src/
+│   │   ├── config/          # DB, Redis, Winston Logger configurations
+│   │   ├── controllers/     # Controller handlers (Auth, AI, Analytics, Papers, Users)
+│   │   ├── jobs/            # BullMQ job queues, schedulers, and workers
+│   │   ├── middleware/      # Rate limiters, JWT verification, validation schemas
+│   │   ├── models/          # 12 Mongoose Schemas for MongoDB collections
+│   │   ├── routes/          # REST route mappings and Swagger config
+│   │   ├── services/        # Business logic services (Gemini, Ingestion, Recommendations, Socket)
+│   │   ├── scripts/         # bulkSeed.js helper utility
+│   │   └── index.js         # Backend entrypoint (boots servers & gracefully shuts down)
+│   ├── package.json
+│   └── Dockerfile
+├── embedding-service/
+│   ├── app.py               # Flask endpoints serving model embeddings & similarity scores
+│   ├── requirements.txt     # Python libraries (sentence-transformers, flask, torch)
+│   ├── start.bat            # Windows startup script
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # UI components (Navbar, Sidebar, Footer, Stats, Cards, Charts)
+│   │   ├── hooks/           # Custom React hooks
+│   │   ├── pages/           # View layouts (Dashboard, Search, TrendRadar, TopicExplorer, Analytics)
+│   │   ├── store/           # Redux Toolkit configuration & auth/nav slices
+│   │   ├── App.jsx          # Route definitions & router providers
+│   │   └── main.jsx         # App bootstrapping
+│   ├── index.html
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── vite.config.js
+│   └── Dockerfile
+├── package.json             # Root commands (concurrently starts dev-backend and dev-frontend)
+├── docker-compose.yml       # Production-ready composition for all containers
+└── README.md                # Detailed project documentation
+```
+
+---
+
+## 🗄️ Database Schema (MongoDB)
+
+ResearchPulse uses MongoDB with Mongoose definitions. Here are the active models:
+
+1.  **User**: Standard logins, JWT secrets, followed topics, followed authors, reading history (capped at last 50 entries), and active alert subscriptions (topic, citation milestone, or author).
+2.  **Paper**: Stores paper abstracts, sparse unique DOIs, citation counts, category tag arrays, URLs, and floating dense embedding vectors.
+3.  **Author**: Tracked authors, total publications counts, citations counts, and affiliations.
+4.  **Institution**: Academic organizations, geographical location, publication numbers, and citation aggregate statistics.
+5.  **AiSummary**: Caches Gemini responses (executive summary, contributions, findings, limitations, future work, methodology) mapped to a paper.
+6.  **Trend**: Growth charts for topics daily, weekly, or monthly (publication counts, citation growth, growth percent, trend score, status).
+7.  **TopicCluster**: Predefined groupings (AI, Health, Quantum, Climate) tracking aggregations.
+8.  **Notification**: Real-time websocket and in-app alerts (read/unread states).
+9.  **Recommendation**: Pre-computed custom user recommendation scores.
+10. **SavedPaper**: User bookmark libraries.
+11. **Topic**: Followers tracking and growth indicators.
+12. **Citation**: Historical citations tracker.
+
+---
+
+## 🔌 API Reference
+
+Full interactive Swagger docs are available at `/api/docs`.
+
+### Authentication
+*   `POST /api/auth/register` — Create researcher account.
+*   `POST /api/auth/login` — Sign in and receive JWT token.
+*   `POST /api/auth/logout` — Revoke session.
+*   `GET /api/auth/me` — Check active credentials.
+
+### Discovery & Search
+*   `GET /api/papers` — Paginated list of ingested papers. Filter by topic, author, or publisher source.
+*   `GET /api/papers/:id` — Detail view for a paper. Inserts a record into the user's reading history.
+*   `GET /api/search` — Search query papers.
+*   `GET /api/authors/rankings` — Leaderboards for top authors.
+*   `GET /api/institutions/rankings` — Top university affiliations.
+
+### AI & Recommendations
+*   `GET /api/ai/summary/:paperId` — Get or generate structured summary.
+*   `POST /api/ai/summary/:paperId/generate` — Force regenerate summary using Gemini.
+*   `GET /api/ai/similar/:paperId` — Retrieve semantically similar papers.
+*   `GET /api/ai/gaps` — Generate identified gaps within active topic clusters.
+*   `GET /api/ai/recommendations` — Fetch personalized paper feeds.
+*   `POST /api/ai/recommendations/refresh` — Re-score and refresh recommendations.
+*   `GET /api/ai/predictions?topic=X&horizon=6` — Monthly publication volume forecasting.
+
+### Trends & Analytics
+*   `GET /api/analytics/trends` — Topic trends over time.
+*   `POST /api/analytics/trends/compute` — Trigger manually.
+*   `GET /api/analytics/citations` — H-Index metrics and category citations.
+*   `GET /api/analytics/topics` — Get computed topic semantic groups.
+*   `GET /api/analytics/dashboard` — Global platform metrics overview.
+*   `GET /api/analytics/timeseries` — Monthly timelines for specific terms.
+
+### Subscriptions & Notifications
+*   `GET /api/alerts` — Paged notifications.
+*   `PUT /api/alerts/read-all` — Dismiss alerts.
+*   `PUT /api/alerts/:id/read` — Dismiss specific alert.
+*   `POST /api/alerts/subscribe` — Subscribe to author/topic push alerts.
+*   `DELETE /api/alerts/subscribe/:refName` — Unsubscribe.
+
+---
+
+## ⚙️ Environment Variables Configuration
+
+Create a `.env` file in your `backend/` directory for local execution:
+
+```env
 PORT=5000
 NODE_ENV=development
 LOG_LEVEL=debug
+
+# Databases & Caches
 MONGO_URI=mongodb://127.0.0.1:27017/research_pulse
 REDIS_URL=redis://127.0.0.1:6379
-JWT_SECRET=replace_with_secure_random
+
+# Cryptographic Keys & Integrations
+JWT_SECRET=add_your_secure_jwt_random_string_here
+GEMINI_API_KEY=AIzaSy...   # Optional: Mock fallback is used if omitted
+
+# Microservice URLs
 EMBEDDING_SERVICE_URL=http://localhost:5001
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=you@example.com
-SMTP_PASS=secret
+
+# SMTP Email Alert Configuration
+SMTP_HOST=smtp.mailtrap.io
+SMTP_PORT=2525
+SMTP_USER=your_smtp_user
+SMTP_PASS=your_smtp_password
 ```
 
-For production, store secrets in your environment provider or secrets manager, and do NOT commit them to Git.
+---
 
-## Local development (detailed)
+## 🚀 Local Development Setup
 
-Prerequisites:
+### Prerequisites
+*   **Node.js 18+** & `npm`
+*   **Python 3.11+** & `pip`
+*   **MongoDB & Redis** (Or Docker to spin them up instantly)
 
-- Node.js 18+ and npm
-- Python 3.11+ and pip
-- Docker & Docker Compose (recommended for local MongoDB/Redis)
-
-Install node dependencies (root helper):
-
+### Step 1: Install Node Dependencies
+In the root directory, run the helper command to install dependencies across the workspace:
 ```bash
 npm run install-all
 ```
 
-Install Python dependencies for embedding service
-
+### Step 2: Install Python Embedding Dependencies
 ```bash
 cd embedding-service
+# (Recommended) Create virtual environment
+python -m venv venv
+venv\Scripts\activate   # On Windows
+source venv/bin/activate # On Unix/macOS
+
+# Install libraries
 pip install -r requirements.txt
 cd ..
 ```
 
-Tip: `torch` may require a platform-specific wheel. On Windows use the official PyTorch instructions to install the appropriate wheel for CPU/GPU support.
-
-Start infrastructure locally using Docker (quick):
-
+### Step 3: Run Databases via Docker
+If you do not have MongoDB and Redis installed natively, run these Docker commands:
 ```bash
-# Start MongoDB
+# Start MongoDB Container
 docker run -d --name pulse_mongo -p 27017:27017 -v pulse_mongo_data:/data/db mongo:6
 
-# Start Redis
+# Start Redis Container
 docker run -d --name pulse_redis -p 6379:6379 redis:7
 ```
 
-Start the embedding service
+### Step 4: Boot the Platform
+Open multiple terminal sessions, or utilize the root dev command:
+
+#### Terminal 1: Embedding Microservice
+```bash
+cd embedding-service
+# (Ensure virtual environment is active)
+python app.py
+```
+
+#### Terminal 2: Concurrently start React & Express Dev Servers
+In the repository root directory, run:
+```bash
+npm run dev
+```
+
+Visit the platform:
+*   **Frontend web page**: `http://localhost:5173`
+*   **Backend server landing**: `http://localhost:5000/`
+*   **Interactive API documentation**: `http://localhost:5000/api/docs`
+*   **Embedding Service check**: `http://localhost:5001/health`
+
+---
+
+## 🐳 Docker & Containerization
+
+All components are containerized for zero-friction deployments. 
+
+### Local Composition
+Run the entire ecosystem locally using `docker-compose`:
 
 ```bash
-python embedding-service/app.py
-```
-
-Start the backend (dev):
-
-```bash
-npm run dev-backend
-```
-
-Start the frontend (dev):
-
-```bash
-npm run dev-frontend
-```
-
-Visit the frontend (Vite): usually `http://localhost:5173`. Backend API: `http://localhost:5000/api`.
-
-Dev tips:
-
-- If you're low on RAM, run the embedding service remote or mock the embedding endpoints by returning fixed vectors.
-- Use `nodemon` for automatic backend reloads (already configured in `backend/package.json` as `dev`).
-
-## Docker & docker-compose (recommended)
-
-This repo is ready for containerization. Below are recommended `Dockerfile`s and a full `docker-compose.yml` suitable for local testing. For production, use a container registry and orchestrator (ECS/GKE/EKS).
-
-### Recommended `Dockerfile`s
-
-`backend/Dockerfile`
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /usr/src/app
-COPY backend/package*.json ./
-RUN npm ci --production
-COPY backend/ ./
-ENV NODE_ENV=production
-EXPOSE 5000
-CMD ["node", "src/index.js"]
-```
-
-`frontend/Dockerfile` (multi-stage build)
-
-```dockerfile
-FROM node:18-alpine AS build
-WORKDIR /app
-COPY frontend/package*.json ./
-RUN npm ci
-COPY frontend/ ./
-RUN npm run build
-
-FROM nginx:stable-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-`embedding-service/Dockerfile`
-
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY embedding-service/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-COPY embedding-service/ ./
-EXPOSE 5001
-CMD ["python", "app.py"]
-```
-
-Notes:
-- For `embedding-service`, prefer a base image that already includes PyTorch or use official PyTorch images for GPU support. Installing `torch` in a slim image can be slow and produce large images.
-
-### Example `docker-compose.yml` (local testing)
-
-Save this in the repo root as `docker-compose.yml` for local development. It wires up MongoDB and Redis and starts embedding, backend and frontend containers.
-
-```yaml
-version: "3.8"
-services:
-  mongo:
-    image: mongo:6
-    restart: unless-stopped
-    volumes:
-      - pulse_mongo_data:/data/db
-    ports:
-      - "27017:27017"
-
-  redis:
-    image: redis:7
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-
-  embedding:
-    build:
-      context: .
-      dockerfile: embedding-service/Dockerfile
-    restart: unless-stopped
-    ports:
-      - "5001:5001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    restart: unless-stopped
-    ports:
-      - "5000:5000"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/research_pulse
-      - REDIS_URL=redis://redis:6379
-      - EMBEDDING_SERVICE_URL=http://embedding:5001
-      - JWT_SECRET=${JWT_SECRET}
-    depends_on:
-      - mongo
-      - redis
-      - embedding
-
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-
-volumes:
-  pulse_mongo_data:
-```
-
-Run locally:
-
-```bash
-# set JWT_SECRET in the shell or a .env file used by docker-compose
-export JWT_SECRET=$(openssl rand -hex 32)
+# Start containers and rebuild images
 docker-compose up --build -d
 ```
 
-Access:
-
-- Frontend: http://localhost
-- Backend: http://localhost:5000/api
-
-Common adjustments for production:
-
-- Replace local `mongo` and `redis` with managed endpoints (MongoDB Atlas, AWS ElastiCache). Update `MONGO_URI` and `REDIS_URL`.
-- Use a private VPC/subnet for databases; do not expose Mongo/Redis ports publicly.
-- Configure health checks and readiness probes in your orchestrator.
-
-## Production deployment guidance
-
-Recommended pattern for production:
-
-- Frontend: build static assets and serve via CDN (S3 + CloudFront, Netlify, Vercel, or static site on nginx). This reduces load on backend.
-- Backend: containerized service deployed to a container hosting solution (AWS ECS Fargate, Google Cloud Run, Azure App Service, or Kubernetes). Use multiple replicas behind a load balancer.
-- Worker pool: deploy one or more worker replicas to process BullMQ queues. Workers can be part of the `backend` image but run with a worker entrypoint.
-- Embedding service: run as a separate service on a node with sufficient RAM or GPU. Optionally switch to a managed vector/embedding provider.
-- Database & cache: use managed MongoDB and managed Redis. Configure backups and automated failover.
-- Secrets: store `JWT_SECRET`, `GEMINI_API_KEY`, SMTP credentials in a secret manager (AWS Secrets Manager, GitHub Secrets, or Kubernetes Secrets).
-
-### Step-by-step production checklist
-
-1. Build immutable images and store them in a registry (GHCR, Docker Hub, ECR).
-2. Provision managed MongoDB (Atlas) and Redis (ElastiCache/Redis Cloud).
-3. Provision a load balancer and container runtime (ECS/GKE/Cloud Run/AKS).
-4. Deploy backend replicas and worker replicas separately. Configure auto-scaling rules for CPU/memory and queue backlog.
-5. Deploy embedding service on dedicated node pool (high memory or GPU nodes) or use a managed embeddings provider.
-6. Use a CDN or static hosting for frontend builds. Use TLS across clients and API.
-7. Configure application logging to a centralized system and set up alerts for errors and queue depth.
-
-### Socket.IO and WebSocket scaling
-
-- If you scale backend nodes, use a Socket.IO adapter backed by Redis so events are propagated across nodes.
-- Use sticky sessions only if you cannot use a pub/sub adapter, but prefer the Redis adapter.
-
-### Worker topology
-
-- Workers should be stateless; run multiple replicas behind the same Redis queues. Configure concurrency and process limits. Monitor job failure rates and dead-letter queues.
-
-### Embeddings at scale
-
-- For CPU-only embedding service: use machines with large RAM (16–64GB) depending on model size and batch throughput.
-- For GPU: select appropriate CUDA images and match PyTorch to driver versions. Consider batching requests to improve throughput.
-
-## CI/CD recommendations
-
-- Build & test pipeline (GitHub Actions) that:
-  - Installs dependencies and runs lint/tests for backend & frontend
-  - Builds Docker images and pushes to a registry (GHCR, Docker Hub)
-  - Optionally deploys images to target environment (ECS/GKE)
-
-- Securely store deploy-time secrets in repo-level or environment-level secret stores.
-
-### Example GitHub Actions workflow (build + push)
-
-Save as `.github/workflows/ci-cd.yml` (example pushes images to GHCR and triggers a deployment step):
-
-```yaml
-name: CI
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Build and push backend image
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/research-pulse-backend:${{ github.sha }}
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/research-pulse-frontend:${{ github.sha }}
-
-      - name: Build and push embedding image
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/research-pulse-embedding:${{ github.sha }}
-
-      # Optional: deploy step depends on your target provider (ECS, GKE, etc.)
+To close the ecosystem:
+```bash
+docker-compose down -v
 ```
 
-Store container registry credentials and deployment credentials in GitHub Secrets.
+---
 
-### Blue/Green or Canary deploys
+## 🌐 Production Deployment Guidance
 
-- Prefer blue/green or canary for zero-downtime deploys. Use infrastructure features (ECS deployments, Kubernetes deployments with rolling updates) or deployment orchestrators.
+A production setup should decouple components to scale independently:
 
-## Kubernetes (manifests + guidance)
+```
+                  ┌───────────────────┐
+                  │   DNS / Cloudflare│
+                  └─────────┬─────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              ▼                           ▼
+    ┌───────────────────┐       ┌───────────────────┐
+    │  Static hosting   │       │   Load Balancer   │
+    │  (S3, Vercel, CDN)│       │  (AWS ALB, Nginx) │
+    └───────────────────┘       └─────────┬─────────┘
+      React SPA Assets                    │
+                                ┌─────────┴─────────┐
+                                ▼                   ▼
+                      ┌───────────────────┐┌───────────────────┐
+                      │  API Replica (1)  ││  API Replica (2)  │
+                      └─────────┬─────────┘└─────────┬─────────┘
+                                │                    │
+        ┌───────────────────────┼────────────────────┼──────────┐
+        ▼                       ▼                    ▼          ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐┌──────────────────┐
+│   MongoDB Atlas  │  │   Redis Cluster  │  │BullMQ Worker Pool││Embedding Service │
+│   (Replicated)   │  │   (ElastiCache)  │  │ (Separate Pods)  ││(High Memory/GPU) │
+└──────────────────┘  └──────────────────┘  └──────────────────┘└──────────────────┘
+```
 
-Below are minimal manifest snippets to deploy the `backend` and `worker`. These are examples — adapt resource requests/limits and readiness/liveness probes for your environment.
+1.  **Frontend SPA**: Serve statically using CDNs (AWS S3 + CloudFront, Vercel, or Netlify).
+2.  **API Gateway Servers**: Deploy behind an ALB on container hosting environments (AWS ECS Fargate, GCP Cloud Run, or Kubernetes).
+3.  **Background Workers**: Run worker nodes separately by triggering the entry command `node src/jobs/worker.js`. Scaled via queue metrics or CPU.
+4.  **Embedding Server**: Place on dedicated host instances with appropriate RAM (16–64GB) or GPU resources depending on transaction volume.
+5.  **Datastores**: Move to managed instances: MongoDB Atlas and AWS ElastiCache. Enforce VPC separation.
 
-`backend-deployment.yaml` (snippet):
+---
 
+## ☸️ Kubernetes Orchestration
+
+Deploy pods inside a cluster using YAML manifests.
+
+### 1. Persistent Secrets Configuration (`pulse-secrets.yaml`)
+Create this manifest to store DB strings and AI API keys securely:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pulse-secrets
+type: Opaque
+data:
+  MONGO_URI: bW9uZ29kYisvc3J2Oi8vdXNlcjpwYXNzQGNsdXN0ZXIubW9uZ29kYi5uZXQvcmVzZWFyY2hfcHVsc2U= # Base64 encoded
+  REDIS_URL: cmVkaXM6Ly9yZWRpcy1jbHVzdGVyOjYzNzk=
+  JWT_SECRET: c2VjdXJlX2tleV9kZW1vX3N0cmluZw==
+  GEMINI_API_KEY: QUl6YVN5RGVtb0tleVN0cmluZw==
+```
+
+### 2. Backend Deployment Deployment (`backend-deployment.yaml`)
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pulse-backend
+  labels:
+    app: pulse-backend
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: pulse-backend
@@ -458,104 +435,148 @@ spec:
         app: pulse-backend
     spec:
       containers:
-        - name: backend
-          image: ghcr.io/<org>/research-pulse-backend:latest
+        - name: api
+          image: ghcr.io/sumanshu01/research-pulse-backend:latest
+          ports:
+            - containerPort: 5000
           env:
+            - name: NODE_ENV
+              value: "production"
             - name: MONGO_URI
               valueFrom:
                 secretKeyRef:
                   name: pulse-secrets
                   key: MONGO_URI
-          ports:
-            - containerPort: 5000
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulse-secrets
+                  key: REDIS_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: pulse-secrets
+                  key: JWT_SECRET
+            - name: EMBEDDING_SERVICE_URL
+              value: "http://pulse-embedding-svc:5001"
           readinessProbe:
             httpGet:
-              path: /api/
+              path: /
               port: 5000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 500m
+              memory: 512Mi
 ```
-
-`worker-deployment.yaml` (snippet):
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: pulse-worker
-spec:
-  replicas: 2
-  template:
-    metadata:
-      labels:
-        app: pulse-worker
-    spec:
-      containers:
-        - name: worker
-          image: ghcr.io/<org>/research-pulse-backend:latest
-          command: ["node", "src/jobs/worker.js"]
-          envFrom:
-            - secretRef:
-                name: pulse-secrets
-```
-
-Notes:
-- Use `HorizontalPodAutoscaler` (HPA) to scale workers by CPU or custom metrics (queue length via Prometheus exporter).
-- Use `PodDisruptionBudgets` to avoid mass worker disruption during maintenance.
-
-## Scaling, monitoring & observability
-
-Monitoring & observability checklist:
-
-- Export metrics (Prometheus) from Node app or instrument critical points (request latency, queue depth, job failure rates).
-- Ship logs to central system (CloudWatch, ELK, Datadog) using container stdout.
-- Configure alerts for: job failures, high queue backlog, high error rates, low disk/DB connectivity.
-
-Backups & DR:
-
-- Use managed MongoDB backup policies (Atlas snapshots) or schedule `mongodump` to a secure object store.
-- Test restore procedures at least quarterly.
-
-## Security & best practices
-
-Additional security steps:
-
-- Use HTTPS / TLS for all ingress and egress.
-- Enforce network separation between services (private subnets for DBs).
-- Rotate secrets and use short-lived credentials where possible.
-- Limit API keys and GEMINI_API_KEY usage to backend servers behind VPC firewall.
-
-## Troubleshooting
-
-Debugging tips & commands:
-
-- Check backend logs:
-
-```bash
-docker-compose logs -f backend
-# or
-kubectl logs -l app=pulse-backend
-```
-
-- Check worker queue length (Redis) and inspect failed jobs: use `redis-cli` or BullMQ monitoring UI (e.g., Arena, BullBoard).
-- Confirm embedding service health:
-
-```bash
-curl http://localhost:5001/health
-```
-
-- Test Gemini client quickly (if you have key): run a simple curl or node script that hits your `/api/ai` endpoints.
-
-Runtime troubleshooting checklist:
-
-- 500 errors: check stack traces in backend logs and confirm `NODE_ENV` is not hiding them.
-- Connection refused to Mongo/Redis: verify `MONGO_URI` and `REDIS_URL`, and check network/firewall.
-- Slow background jobs: inspect worker CPU / memory and queue backlogs.
-
-## Next steps (suggested)
-
-1. Add `Dockerfile`s and `docker-compose.yml` (I can generate these for you)
-2. Create GitHub Actions workflow to build and push images
-3. Add deployment manifests (Kubernetes/Helm) if you need cluster orchestration
 
 ---
+
+## 🔄 CI/CD Pipeline
+
+Implement a deployment workflow using GitHub Actions. Create `.github/workflows/ci.yml`:
+
+```yaml
+name: Production CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Lint and Test Backend
+        run: |
+          cd backend
+          npm ci
+          # npm test (Add tests when configured)
+          
+  build-and-push:
+    name: Build & Publish Containers
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/research-pulse-backend:latest
+          
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/research-pulse-frontend:latest
+```
+
+---
+
+## 📈 Monitoring & Troubleshooting
+
+### Log Inspection
+*   **Docker Compose logs**:
+    ```bash
+    docker-compose logs -f backend
+    docker-compose logs -f embedding
+    ```
+*   **Kubernetes Pod Logs**:
+    ```bash
+    kubectl logs -l app=pulse-backend --tail=100 -f
+    ```
+
+### Common Issues & Resolution Checklists
+
+#### 1. Port Conflict (EADDRINUSE)
+If you get `EADDRINUSE` errors on port `5000` or `5173`:
+*   *Windows*:
+    ```powershell
+    netstat -ano | findstr :5000
+    taskkill /PID <PID> /F
+    ```
+*   *Unix*:
+    ```bash
+    kill -9 $(lsof -t -i:5000)
+    ```
+
+#### 2. Redis Connection Failed warnings
+*   *Symptoms*: Backend prints `Redis connection retry limit reached. Redis will run in fallback mock-mode.`
+*   *Impact*: Background scheduler switches to local `setInterval` loops. BullMQ tasks run in memory.
+*   *Action*: Confirm Redis container status via `docker ps`. Verify firewall blocks on port `6379`.
+
+#### 3. PyTorch Wheel Incompatibilities (Windows / CPU vs CUDA)
+*   *Symptoms*: `pip install` fails on embedding service, or Python throws CUDA out of memory errors.
+*   *Action*: Check driver capabilities. To enforce CPU mode, edit `embedding-service/requirements.txt` to point explicitly to CPU wheels, or load the lighter model.
+
+---
+
+<div align="center">
+  <sub>Developed by <a href="https://github.com/Sumanshu01">Sumanshu Jindal</a>. Empowering scientific discovery with intelligence.</sub>
+</div>
