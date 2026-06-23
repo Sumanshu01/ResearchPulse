@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #E6E3FC;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(244, 55%, 70%, 0.15) 0, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(186, 68%, 70%, 0.1) 0, transparent 50%);
+    background-attachment: fixed;
+    color: #120E3D;
+  }
+}
+
+/* Custom Glassmorphism Classes */
+.glass-card {
+  background: rgba(215, 210, 252, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(18, 14, 61, 0.1);
+}
+
+.glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+  background: rgba(205, 198, 250, 0.85);
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.15), 0 8px 10px -6px rgba(99, 102, 241, 0.15);
+}
+
+/* Custom Webkit scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #E6E3FC;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4BCF2;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ABA2EB;
+}
+
+/* Pulsing blue glow utility */
+.brand-glow {
+  box-shadow: 0 0 15px -3px rgba(99, 102, 241, 0.35);
+}
