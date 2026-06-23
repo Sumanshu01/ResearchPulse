@@ -559,10 +559,3 @@ Runtime troubleshooting checklist:
 3. Add deployment manifests (Kubernetes/Helm) if you need cluster orchestration
 
 ---
-
-If you'd like, I can now:
-
-- generate the `Dockerfile`s and `docker-compose.yml` in the repo and run a local compose test (recommended),
-- or scaffold a GitHub Actions workflow that builds images and pushes to a registry.
-
-Please choose one and I will implement it.
